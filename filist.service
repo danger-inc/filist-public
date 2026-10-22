@@ -1,0 +1,11 @@
+[Unit]
+Description=filist – Datei-Explorer und Datei-Dialog (Hintergrunddienst)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.impl.portal.desktop.filist
+ExecStart=/usr/bin/env python3 %h/.local/share/filist/app/filist.py --daemon
+Restart=on-failure
+RestartSec=1

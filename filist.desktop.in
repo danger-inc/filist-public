@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=filist
+GenericName=Datei-Explorer
+Comment=Dateien und Ordner verwalten – schnell, mit Tabs, Vorschau und geteilter Ansicht
+Exec=@EXEC@ %U
+Icon=filist
+Terminal=false
+Categories=System;FileTools;FileManager;Utility;
+Keywords=dateien;ordner;explorer;dateimanager;files;folder;file manager;
+MimeType=inode/directory;
+StartupWMClass=de.invincible.Filist
