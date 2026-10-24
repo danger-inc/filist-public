@@ -1,10 +1,12 @@
 # filist
 
-Datei-Explorer für Linux (GTK4) im Stil der Suite (datist, musicalist, notist, scourge):
-schnell, mit Tabs, geteilter Ansicht, Vorschau – und auf Wunsch der Datei-Dialog („Öffnen“/„Speichern
-unter“) für **alle** Programme.
+file explorer for linux (gtk4) in the style of the suite (datist, musicalist, notist, scourge):
+fast, with tabs, split view and preview – and, if you want, the file dialog ("open" / "save as")
+for **all** programs.
 
-## Installieren
+## install
+
+the repository is public – no account needed:
 
 ```bash
 git clone https://github.com/invincible-nix/filist-public ~/filist-src
@@ -12,94 +14,93 @@ cd ~/filist-src
 ./install.sh
 ```
 
-Der Installer fragt nach den Systempaketen (einmal Passwort) und dann zwei Dinge, beide standardmäßig **nein**:
+the installer asks for the system packages (password once) and then two things, both **no** by default:
 
-- **Standard-Dateimanager?** – Ordner öffnen und „Im Ordner anzeigen“ (z. B. aus dem Browser) gehen dann zu filist.
-- **Datei-Dialog für alle Programme?** – „Öffnen“/„Speichern unter“ kommen dann von filist. Tiefer Eingriff,
-  nur sinnvoll auf Hyprland/Sway; rückgängig mit `./setup-portal.sh --undo`.
+* **default file manager?** – opening folders and "show in folder" (e.g. from the browser) then go to filist.
+* **file dialog for all programs?** – "open" / "save as" then come from filist. a deep change,
+only makes sense on hyprland/sway; undo with `./setup-portal.sh --undo`.
 
-Ohne beides ist filist einfach ein zusätzlicher Datei-Explorer – dein bisheriger Dateimanager bleibt unberührt.
-Starten: `filist` oder über das Anwendungsmenü. Entfernen: `./uninstall.sh` (nimmt auch den Datei-Dialog zurück).
+without both, filist is just an additional file explorer – your current file manager is left alone.
+start it with `filist` or from the application menu. removal: `./uninstall.sh` (also reverts the file dialog).
 
-**Hyprland:** `bind = SUPER, E, exec, filist` und, falls du den Datei-Dialog willst, unter `env`:
-`GDK_DEBUG,portals` sowie `GTK_USE_PORTAL,1`. Firefox/Zen zusätzlich:
+**hyprland:** `bind = SUPER, E, exec, filist` and, if you want the file dialog, under `env`:
+`GDK_DEBUG,portals` and `GTK_USE_PORTAL,1`. firefox/zen additionally:
 `about:config` → `widget.use-xdg-desktop-portal.file-picker` = `1`.
 
-## Aktualisieren
+## update
 
 ```bash
 cd ~/filist-src && ./update.sh
 ```
 
-## Läuft auf
+## runs on
 
-| System | Status |
-|---|---|
-| Ubuntu 24.04+, Linux Mint 22+, Debian 13 | getestet (Ubuntu 24.04) |
-| Fedora 39+ | getestet (Fedora 44) |
-| Arch, EndeavourOS, CachyOS, Manjaro | getestet (Arch) |
-| openSUSE Tumbleweed | sollte gehen (ungetestet) |
-| Windows / macOS | nein – filist baut auf Linux-Diensten auf (gvfs, Papierkorb, D-Bus, Portal) |
+| system | status |
+| --- | --- |
+| ubuntu 24.04+, linux mint 22+, debian 13 | tested (ubuntu 24.04) |
+| fedora 39+ | tested (fedora 44) |
+| arch, endeavouros, cachyos, manjaro | tested (arch) |
+| openSUSE Tumbleweed | should work (untested) |
+| windows / macos | no – filist builds on linux services (gvfs, trash, d-bus, portal) |
 
-Nötig ist **GTK 4.12 oder neuer** (Ubuntu 22.04 / Mint 21 / Debian 12 sind zu alt). Mit systemd läuft filist
-als Benutzerdienst im Hintergrund (Fenster sofort da); ohne systemd startet es bei Bedarf über D-Bus.
+required is **gtk 4.12 or newer** (ubuntu 22.04 / mint 21 / debian 12 are too old). with systemd filist runs
+as a user service in the background (window is instantly there); without systemd it starts on demand via d-bus.
 
-## Was alles drin ist
+## what's in there
 
-- **Tabs** (Strg+T, Strg+W, Alt+1–9) und **geteilte Ansicht** (F3, Tab wechselt die Hälfte, F5/F6 kopiert/verschiebt hinüber)
-- **Liste** (sortierbar per Spaltenkopf) und **Raster** mit Vorschaubildern (Bilder, Videos, PDF …), Zoom mit Strg ±
-- **Seitenleiste**: Ordner, Lesezeichen (gleiche wie GTK/Thunar), Laufwerke mit Füllstand, einhängen/auswerfen,
-  Netzwerk (sftp/smb/ftp), Papierkorb
-- **Pfadleiste**: klicken oder Strg+L tippen (Tab vervollständigt), `/` und `~` springen direkt hinein
-- **Filtern** beim Tippen, **Enter sucht in allen Unterordnern**; in der Liste einfach lostippen springt zum Namen
-- **Kopieren/Ausschneiden/Einfügen** – auch mit anderen Programmen (Thunar, Nautilus, Browser); Bilder und Text aus der
-  Zwischenablage werden als Datei eingefügt
-- **Ziehen & Ablegen** (Strg = kopieren, Umschalt = verschieben, Strg+Umschalt = Verknüpfung), auch auf Ordner, Tabs,
-  Pfad und Seitenleiste
-- Fortschritt mit Tempo und Restzeit, **Abbrechen**, Nachfrage bei Konflikten (ersetzen, überspringen, beide
-  behalten, zusammenführen – auch „für alle“)
-- **Rückgängig** (Strg+Z) für Umbenennen, Verschieben, Kopieren, Papierkorb, Neu
-- **Umbenennen direkt in der Zeile** (F2, wie im Windows-Explorer), **mehrere umbenennen** mit Suchen/Ersetzen,
-  Regex, Nummern und Live-Vorschau; neue Ordner/Dateien werden gleich in der Zeile benannt
-- **Teilen** (Rechtsklick): Quick Share ans Handy (mit sharist), per Mail mit Anhang, Bluetooth, QR-Code
-- **Netzlaufwerke hinter VPN**: Rechtsklick auf den Ort → „vpn vorher verbinden“ – beim Öffnen verbindet filist
-  das VPN (NetworkManager, eduVPN) selbst und zeigt solange einen Ladekreis
-- **Papierkorb** mit Wiederherstellen, endgültig löschen (Umschalt+Entf), leeren
-- **Packen** (zip, tar.gz, tar.xz, 7z) und **Entpacken** (fast alle Formate)
-- **Vorschau** (Leertaste): Bilder, Text, PDF/Video-Standbild, Ordnerinhalt, Infos
-- **Eigenschaften** (Alt+Enter): Größe (auch ganzer Ordner), Rechte ändern (auch rekursiv), Besitzer, Standard-Programm,
-  Prüfsummen (md5/sha1/sha256)
-- **Öffnen mit** (alle Programme, durchsuchbar, als Standard merken, eigener Befehl), Terminal hier (F4)
-- Versteckte Dateien (Strg+H), Auswahl nach Muster (Strg+S), umkehren (Strg+I)
-- Schmale Fenster: Seitenleiste und Spalten blenden sich automatisch aus
+* **tabs** (ctrl+t, ctrl+w, alt+1–9) and **split view** (F3, tab switches the half, F5/F6 copies/moves across)
+* **list** (sortable by column header) and **grid** with thumbnails (images, videos, pdf …), zoom with ctrl ±
+* **sidebar:** folders, bookmarks (same as gtk/thunar), drives with usage, mount/eject,
+network (sftp/smb/ftp), trash
+* **path bar:** click or type with ctrl+L (tab completes), `/` and `~` jump right in
+* **filter** while typing, **enter searches all subfolders**; in the list just start typing to jump to a name
+* **copy/cut/paste** – also with other programs (thunar, nautilus, browser); images and text from the
+clipboard are pasted as a file
+* **drag & drop** (ctrl = copy, shift = move, ctrl+shift = link), also onto folders, tabs, path bar and sidebar
+* progress with speed and remaining time, **cancel**, conflict dialog (replace, skip, keep both, merge –
+also "for all")
+* **undo** (ctrl+z) for rename, move, copy, trash, new
+* **rename in the row** (F2, like the windows explorer), **batch rename** with search/replace,
+regex, numbering and live preview; new folders/files are named right in the row
+* **share** (right click): quick share to your phone (with sharist), mail with attachment, bluetooth, qr code
+* **network drives behind a vpn:** right click on the location → "vpn vorher verbinden" – when you open it, filist
+connects the vpn itself (networkmanager, eduvpn) and shows a spinner meanwhile
+* **trash** with restore, delete permanently (shift+del), empty
+* **compress** (zip, tar.gz, tar.xz, 7z) and **extract** (almost all formats)
+* **preview** (space): images, text, pdf/video still, folder contents, info
+* **properties** (alt+enter): size (whole folder too), change permissions (recursive too), owner, default program,
+checksums (md5/sha1/sha256)
+* **open with** (all programs, searchable, remember as default, custom command), terminal here (F4)
+* hidden files (ctrl+h), select by pattern (ctrl+s), invert (ctrl+i)
+* narrow windows: sidebar and columns hide automatically
 
-## Tastenkürzel
+## keyboard shortcuts
 
-| Taste | Aktion | Taste | Aktion |
-|---|---|---|---|
-| Enter | öffnen | Alt+← / → / ↑ | zurück / vor / hoch |
-| Strg+T / Strg+W | Tab auf / zu | Rücktaste | Ordner hoch |
-| Strg+L | Pfad eingeben | Strg+F | filtern / suchen |
-| F2 | umbenennen | Entf / Umschalt+Entf | Papierkorb / löschen |
-| Strg+C / X / V | kopieren / ausschneiden / einfügen | Strg+Z | rückgängig |
-| Strg+Umschalt+N | neuer Ordner | Strg+Alt+N | neue Datei |
-| Strg+H | versteckte Dateien | Leertaste | Vorschau |
-| F3 | teilen | F5 / F6 | in andere Hälfte kopieren / verschieben |
-| F4 | Terminal hier | F9 | Seitenleiste |
-| Strg+1 / Strg+2 | Liste / Raster | Strg+D | Lesezeichen |
-| Alt+Enter | Eigenschaften | Strg+Umschalt+C | Pfad kopieren |
+| key | action | key | action |
+| --- | --- | --- | --- |
+| enter | open | alt+← / → / ↑ | back / forward / up |
+| ctrl+t / ctrl+w | tab open / close | backspace | up one folder |
+| ctrl+l | enter path | ctrl+f | filter / search |
+| F2 | rename | del / shift+del | trash / delete |
+| ctrl+c / x / v | copy / cut / paste | ctrl+z | undo |
+| ctrl+shift+n | new folder | ctrl+alt+n | new file |
+| ctrl+h | hidden files | space | preview |
+| F3 | split view | F5 / F6 | copy / move to the other half |
+| F4 | terminal here | F9 | sidebar |
+| ctrl+1 / ctrl+2 | list / grid | ctrl+d | bookmark |
+| alt+enter | properties | ctrl+shift+c | copy path |
 
-## Was es braucht
+## requirements
 
-GTK 4, PyGObject. Empfohlen: **Tumbler** (Vorschaubilder; Videos zusätzlich über ffmpeg), **bsdtar/7z** (Entpacken),
-**gvfs** (Papierkorb, Netzwerk, „zuletzt benutzt“), **xdg-desktop-portal** (Datei-Dialog). `filist --check` zeigt,
-was fehlt. Die Symbole bringt filist selbst mit.
+gtk 4, pygobject. recommended: **tumbler** (thumbnails; videos additionally via ffmpeg), **bsdtar/7z** (extracting),
+**gvfs** (trash, network, "recent"), **xdg-desktop-portal** (file dialog). `filist --check` shows
+what is missing. the icons are bundled.
 
-## Probleme?
+## problems?
 
-- **Kästchen statt Symbolen:** `./update.sh` – die Symbolschrift kommt mit und wird automatisch geladen.
-- **`filist: Befehl nicht gefunden`:** `~/.local/bin` fehlt im PATH (der Installer zeigt, was in die `~/.bashrc`
-  gehört). Aus dem Anwendungsmenü startet es auch so.
-- **„Im Ordner anzeigen“ öffnet plötzlich filist:** `./install.sh` erneut und bei „Standard-Dateimanager?“ nein
-  sagen, oder `xdg-mime default org.gnome.Nautilus.desktop inode/directory` (bzw. dolphin/thunar).
-- **Datei-Dialog spinnt:** `./setup-portal.sh --undo`, abmelden, anmelden.
+* **boxes instead of symbols:** `./update.sh` – the icon font comes along and is loaded automatically.
+* **`filist: command not found`:** `~/.local/bin` is missing in `PATH` (the installer shows what belongs in
+`~/.bashrc`). from the application menu it starts anyway.
+* **"show in folder" suddenly opens filist:** run `./install.sh` again and answer no at "default file manager?",
+or `xdg-mime default org.gnome.Nautilus.desktop inode/directory` (or dolphin/thunar).
+* **file dialog acts up:** `./setup-portal.sh --undo`, log out, log in.
