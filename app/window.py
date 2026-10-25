@@ -162,6 +162,9 @@ class FwWindow(Gtk.ApplicationWindow):
         self.mode_label = tui.label("", "accent")
         top.append(self.mode_label)
         top.append(self._changelog_btn())
+        self.menu_slot = tui.hbox(spacing=0)               # Zahnrad (Ansicht & Einstellungen) – füllt _build_nav
+        self.menu_slot.set_margin_start(6)
+        top.append(self.menu_slot)
         gt = glass.GlassToggle(self)
         gt.set_margin_start(6)
         top.append(gt)
@@ -260,11 +263,12 @@ class FwWindow(Gtk.ApplicationWindow):
             b.connect("toggled", lambda btn, v=v: btn.get_active() and self.set_view(v))
             self.view_btns[v] = b
             nav.append(b)
-        self.menu_btn = Gtk.MenuButton(label="\U000F035C", tooltip_text="Ansicht & Einstellungen",
+        self.menu_btn = Gtk.MenuButton(label="\U000F0493", tooltip_text="Einstellungen & Ansicht",
                                        valign=Gtk.Align.CENTER)
         self.menu_btn.add_css_class("tbtn")
+        self.menu_btn.set_always_show_arrow(False)
         self.menu_btn.set_popover(self._settings_popover())
-        nav.append(self.menu_btn)
+        self.menu_slot.append(self.menu_btn)
         sc = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.EXTERNAL, vscrollbar_policy=Gtk.PolicyType.NEVER,
                                 propagate_natural_height=True, child=nav)
         return sc
