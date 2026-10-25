@@ -123,6 +123,8 @@ window.fw .fglyph { font-size: 15px; min-width: 18px; color: @secondary; }
 window.fw columnview.fw-list > listview > row,
 window.fw gridview.fw-grid > child { color: @foreground; }
 window.fw .fname { font-weight: bold; color: @foreground; }
+window.fw .fcut { opacity: 0.4; font-style: italic; }
+window.fw .fglyph.fcut, window.fw .tglyph.fcut { opacity: 0.4; }
 window.fw .fhidden { color: alpha(@foreground, 0.55); }
 /* Rechtsklick/Drücken: kein heller Standard-Effekt (blieb weiß, bis die Maus sich bewegte) */
 columnview.fw-list > listview > row:active { background-color: alpha(@primary, 0.24); }
@@ -250,6 +252,11 @@ class Filist(Gtk.Application):
             ws = self.get_windows()
             w = ws[0] if ws else None
         return w
+
+    def set_cut(self, uris):
+        self.cut = set(uris)
+        for p in self.all_panes():
+            p.refresh_cut()
 
     def all_panes(self):
         for w in self.get_windows():

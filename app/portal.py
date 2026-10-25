@@ -8,6 +8,8 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib
 
+import model
+
 PORTAL_NAME = "org.freedesktop.impl.portal.desktop.filist"
 PORTAL_PATH = "/org/freedesktop/portal/desktop"
 
@@ -62,6 +64,14 @@ def is_default_file_manager():
         return bool(info) and info.get_id() == "filist.desktop"
     except Exception:
         return False
+
+
+def _readable(uri):
+    """Netzorte (smb://, sftp://) als file://-URI des gvfs-FUSE-Pfads – nur den können andere Programme lesen."""
+    if uri.startswith("file://"):
+        return uri
+    p = model.path_of(uri)
+    return model.uri_for(p) if p else uri
 
 
 class Services:
@@ -146,6 +156,7 @@ class Services:
             if method == "SaveFiles":
                 d = Gio.File.new_for_uri(uris[0])
                 uris = [d.get_child(n).get_uri() for n in chooser.get("save_files", [])]
+            uris = [_readable(u) for u in uris]
             res = {"uris": GLib.Variant("as", uris)}
             if filter_idx is not None and filters:
                 name, rules = filters[filter_idx]

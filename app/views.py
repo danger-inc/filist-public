@@ -165,6 +165,27 @@ class Pane(Gtk.Box):
         self._attach_item_controllers(w)
         li.set_child(w)
 
+    def _is_cut(self, it):
+        return it.uri in self.win.app.cut
+
+    def _name_classes(self, it, link=True):
+        return (["fname"] + (["fhidden"] if it.hidden else []) + (["flink"] if link and it.is_link else [])
+                + (["fcut"] if self._is_cut(it) else []))
+
+    def refresh_cut(self):
+        """Ausgeschnittene Einträge (Strg+X) blass + kursiv zeigen – nach Ausschneiden/Einfügen/Abbrechen."""
+        for it in self.shown:
+            cut = self._is_cut(it)
+            c = it.extra.get("_name_cell")
+            if c is not None:
+                c._n.set_css_classes(self._name_classes(it))
+                c._g.set_css_classes(["fglyph", "g-" + it.group] + (["fcut"] if cut else []))
+            t = it.extra.get("_tile_cell")
+            if t is not None:
+                t._n.set_css_classes(self._name_classes(it, link=False))
+                t._g.set_css_classes(["tglyph", "g-" + it.group] + (["fcut"] if cut else []))
+                t._pic.set_opacity(0.4 if cut else 1.0)
+
     def _cell_bind(self, _f, li, key):
         w, it = li.get_child(), li.get_item()
         w._item = it
@@ -172,7 +193,8 @@ class Pane(Gtk.Box):
             w._g.set_label(it.glyph)
             w._g.set_css_classes(["fglyph", "g-" + it.group])
             w._n.set_label(it.display)
-            w._n.set_css_classes(["fname"] + (["fhidden"] if it.hidden else []) + (["flink"] if it.is_link else []))
+            w._n.set_css_classes(self._name_classes(it))
+            w._g.set_css_classes(["fglyph", "g-" + it.group] + (["fcut"] if self._is_cut(it) else []))
             w.set_tooltip_text(it.display if len(it.display) > 40 else None)
             it.extra["_name_cell"] = w
         elif key == "size":
@@ -226,7 +248,9 @@ class Pane(Gtk.Box):
         box._g.set_label(it.glyph)
         box._g.set_css_classes(["tglyph", "g-" + it.group])
         box._n.set_label(it.display)
-        box._n.set_css_classes(["fname"] + (["fhidden"] if it.hidden else []))
+        box._n.set_css_classes(self._name_classes(it, link=False))
+        box._g.set_css_classes(["tglyph", "g-" + it.group] + (["fcut"] if self._is_cut(it) else []))
+        box._pic.set_opacity(0.4 if self._is_cut(it) else 1.0)
         box.set_tooltip_text(it.display)
         it.extra["_tile_cell"] = box
         box._frame.set_visible_child_name("glyph")
@@ -427,17 +451,26 @@ class Pane(Gtk.Box):
         tier = 2 if width >= 700 else (1 if width >= 470 else 0)
         if tier != getattr(self, "_tier", None):
             self._tier = tier
-            self._apply_tier(tier)
+            # Spalten erst nach dem Größenwechsel (GTK stürzt ab, wenn Spalten mitten im Ziehen umschalten)
+            if getattr(self, "_tier_id", None):
+                GLib.source_remove(self._tier_id)
+            self._tier_id = GLib.timeout_add(180, self._apply_tier_later)
+
+    def _apply_tier_later(self):
+        self._tier_id = None
+        self._apply_tier()
+        return False
 
     def _apply_tier(self, tier=None):
         """Schmale Ansicht: erst „typ“, dann „geändert“ ausblenden (statt abzuschneiden).
         Papierkorb: „gelöscht“ und „ursprung“ statt „geändert“ und „typ“."""
         tier = getattr(self, "_tier", 2) if tier is None else tier
         trash = bool(self.uri and self.uri.startswith("trash:"))
-        self.columns["type"].set_visible(tier >= 2 and not trash)
-        self.columns["mtime"].set_visible(tier >= 1 and not trash)
-        self.columns["deleted"].set_visible(trash and tier >= 1)
-        self.columns["where"].set_visible(bool(self.search) or (trash and tier >= 2))
+        want = {"type": tier >= 2 and not trash, "mtime": tier >= 1 and not trash,
+                "deleted": trash and tier >= 1, "where": bool(self.search) or (trash and tier >= 2)}
+        for k, v in want.items():
+            if self.columns[k].get_visible() != v:
+                self.columns[k].set_visible(v)
         self.columns["where"].set_title("ursprung" if trash else "ordner")
         return False
 

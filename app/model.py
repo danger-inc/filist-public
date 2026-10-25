@@ -119,7 +119,12 @@ def is_local(uri):
 
 
 def path_of(uri):
-    return Gio.File.new_for_uri(uri).get_path() if is_local(uri) else None
+    """Pfad im Dateisystem; für eingehängte Netzorte (smb://, sftp://) der gvfs-FUSE-Pfad, sonst None."""
+    if is_local(uri):
+        return Gio.File.new_for_uri(uri).get_path()
+    if uri.startswith(("trash:", "recent:", "network:", "computer:", "starred:")) or "://" not in uri:
+        return None
+    return Gio.File.new_for_uri(uri).get_path()
 
 
 def item_meta(name, display, is_dir, is_link, mode):
@@ -228,7 +233,7 @@ class Loader:
         else:
             out = []
             for r in raw:
-                path = path_of(r["target"]) if r["target"] and is_local(r["target"]) else None
+                path = path_of(r["target"] or r["uri"])
                 display = r["display"]
                 if r["extra"].get("orig_path"):
                     display = os.path.basename(r["extra"]["orig_path"])

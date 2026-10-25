@@ -1010,7 +1010,7 @@ class FwWindow(Gtk.ApplicationWindow):
             Gdk.ContentProvider.new_for_bytes("x-special/gnome-copied-files", GLib.Bytes.new(special.encode())),
             prov])
         self.get_clipboard().set_content(union)
-        self.app.cut = set(uris) if cut else set()
+        self.app.set_cut(uris if cut else ())
         self.say(("ausgeschnitten: " if cut else "kopiert: ") +
                  (items[0].display if len(items) == 1 else f"{len(items)} elemente"))
 
@@ -1064,7 +1064,7 @@ class FwWindow(Gtk.ApplicationWindow):
             self.ops.transfer(uris, dest, move=cut, done=lambda j: self._after(j, select=True))
             if cut:
                 self.get_clipboard().set_content(None)
-                self.app.cut = set()
+                self.app.set_cut(())
 
     def _paste_files(self, cb, res, dest):
         try:
@@ -1266,6 +1266,8 @@ class FwWindow(Gtk.ApplicationWindow):
     def _mk(self, folder, name, is_dir, edit=False):
         """Anlegen; mit edit=True danach gleich in der Zeile benennen (wie im Windows-Explorer)."""
         p = os.path.join(folder, name)
+        pane = self.pane
+        puri = Gio.File.new_for_uri(pane.uri).get_child(name).get_uri()     # bei smb:// der smb-URI, nicht der FUSE-Pfad
         try:
             if is_dir:
                 os.mkdir(p)
@@ -1274,11 +1276,10 @@ class FwWindow(Gtk.ApplicationWindow):
         except OSError as e:
             self.say(e.strerror, error=True)
             return
-        self.ops.record(f"Anlegen von {name}", lambda: self.ops.trash([model.uri_for(p)], record=False))
-        pane = self.pane
-        pane.select_after = model.uri_for(p)
+        self.ops.record(f"Anlegen von {name}", lambda: self.ops.trash([puri], record=False))
+        pane.select_after = puri
         if edit:
-            pane.edit_after = (model.uri_for(p), lambda it: self._inline_rename(pane, it))
+            pane.edit_after = (puri, lambda it: self._inline_rename(pane, it))
             pane.reload()
 
     def duplicate(self):
@@ -1732,10 +1733,15 @@ class FwWindow(Gtk.ApplicationWindow):
                 pane.go(model.uri_for(target))
                 self.name_entry.set_text("")
                 return
-            uri = model.uri_for(target)
+            uri = model.uri_for(target)         # file://-Pfad (bei smb: FUSE-Pfad, den auch andere Programme lesen)
             if os.path.exists(target):
-                dialogs.confirm(self, "ersetzen?", f"„{name}“ gibt es schon. Ersetzen?", "ersetzen",
-                                lambda: self.finish(True, [uri]))
+                cd = getattr(self, "_replace_dlg", None)
+                if cd is not None and cd.get_visible():       # zweites Enter im Namensfeld = trotzdem ersetzen
+                    cd.close()
+                    self.finish(True, [uri])
+                    return
+                self._replace_dlg = dialogs.confirm(self, "ersetzen?", f"„{name}“ gibt es schon. Ersetzen?",
+                                                    "ersetzen", lambda: self.finish(True, [uri]))
                 return
             self.finish(True, [uri])
 
