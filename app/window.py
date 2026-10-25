@@ -208,17 +208,22 @@ class FwWindow(Gtk.ApplicationWindow):
             tell = self.mode == "browse"
 
             def has_update(latest):
-                b.add_css_class("news")
-                b.remove_css_class("off")
-                b.set_label(f"󰚰 v{version} → v{latest}")
-                b.set_tooltip_text(changelog.update_text(latest) + " · klick: changelog")
                 if tell and not getattr(FwWindow, "_update_told", None) == latest:
                     FwWindow._update_told = latest
                     GLib.timeout_add(900, lambda: (self.say(changelog.update_text(latest), seconds=12), False)[1])
             getattr(changelog, "check_update", lambda *a: None)("filist", version, has_update)
         except Exception as e:
             print("update-check:", e, file=sys.stderr)
-        return b
+        box = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
+        box.append(b)
+        try:                      # 󰚰 update neben der Version (lädt + installiert)
+            import changelog
+            upd = changelog.update_button("filist", version, notify=self.say, classes=("flat", "news"))
+            upd.set_margin_start(2)
+            box.append(upd)
+        except Exception as e:
+            print("update-button:", e, file=sys.stderr)
+        return box
 
     def _build_nav(self):
         nav = tui.hbox(spacing=4)
@@ -1591,6 +1596,16 @@ class FwWindow(Gtk.ApplicationWindow):
             return True
         if self._focus_in_text():
             return self._text_key(kv, state)
+        if self.mode == "save" and self.name_entry and not ctrl and not state & Gdk.ModifierType.ALT_MASK:
+            ch = Gdk.keyval_to_unicode(kv)
+            if ch >= 32 and ch != 127:            # Speichern-Dialog: einfach lostippen = Dateiname ersetzen
+                name = self.name_entry.get_text()
+                dot = name.rfind(".")
+                tail = name[dot:] if dot > 0 else ""
+                self.name_entry.grab_focus()
+                self.name_entry.set_text(chr(ch) + tail)
+                self.name_entry.set_position(1)
+                return True
         if kv == Gdk.KEY_space and not ctrl:
             self.toggle_preview()
             return True

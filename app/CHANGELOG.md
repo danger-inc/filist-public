@@ -1,5 +1,18 @@
 # filist – Änderungen
 
+## 1.4.2 (2026-10-25)
+- **Update-Knopf**: Neben der Versionsnummer steht „󰑐“ – Klick sucht sofort nach einem Update. Gibt es eine neuere
+  Version, wird daraus „󰚰 update“; ein Klick lädt und installiert sie (Linux und Windows), danach heißt er „󰑓 neu starten“.
+- **Rückmeldung bei Umschalt-Knöpfen**: „An“ (z. B. „Ton behalten“) ist jetzt auch unter dem Mauszeiger zu sehen,
+  Drücken färbt sofort – man muss die Maus nicht mehr wegbewegen, um zu sehen, ob der Klick angekommen ist.
+- **Windows: echte Titelleiste** – das Fenster lässt sich verschieben, in der Größe ändern, minimieren und
+  maximieren.
+
+## 1.4.1 (2026-10-25)
+- **Speichern-Dialog**: Einfach lostippen – egal wo der Fokus gerade ist, ersetzt die erste Taste den Dateinamen
+  (die Endung bleibt) und alles Weitere landet im Namensfeld. Das Namensfeld bekommt außerdem sofort den Fokus,
+  sobald das Fenster aktiv wird.
+
 ## 1.4.0 (2026-10-23)
 - **Umbenennen direkt in der Zeile** wie im Windows-Explorer: `F2` oder Rechtsklick → umbenennen öffnet kein
   Fenster mehr, der Name wird in der Liste bzw. Kachel bearbeitet (Endung bleibt unmarkiert). `Enter` oder ein

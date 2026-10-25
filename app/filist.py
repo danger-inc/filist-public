@@ -343,6 +343,10 @@ class Filist(Gtk.Application):
                 win.name_entry.select_region(0, dot if dot > 0 else -1)
                 return False
             GLib.timeout_add(150, focus)
+            # Fokus kommt manchmal erst nach dem Zeigen beim Fenster an (Compositor) → beim ersten Aktivwerden nochmal
+            hid = []
+            hid.append(win.connect("notify::is-active", lambda w, _p: (
+                w.is_active() and not w._focus_in_text() and focus(), w.is_active() and w.disconnect(hid[0]))))
         return win
 
 
