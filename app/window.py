@@ -303,6 +303,8 @@ class FwWindow(Gtk.ApplicationWindow):
         term = tui.Entry(text=self.prefs.get("terminal", ""), placeholder="automatisch (kitty, foot …)", width=22)
         term.connect("changed", lambda e: self.prefs.__setitem__("terminal", e.get_text().strip()))
         box.append(term)
+        box.append(tui.label("design", "dim"))
+        box.append(tui.theme_button())
         pop.set_child(box)
         return pop
 
