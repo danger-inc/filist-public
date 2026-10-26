@@ -1,4 +1,19 @@
+<!-- gh-header -->
+<div align="center">
+
+<img src="app/logo/filist.svg" width="88" alt="filist">
+
 # filist
+
+**file explorer for linux – tabs, split view, preview**
+
+<img src="https://img.shields.io/badge/GTK-4-4A86CF?style=flat-square&logo=gtk&logoColor=white" alt="GTK"> <img src="https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="python"> <img src="https://img.shields.io/badge/platform-linux-2E7D6B?style=flat-square&logo=linux&logoColor=white" alt="platform"> <img src="https://img.shields.io/badge/made%20for-wayland%20·%20hyprland-7C6BC4?style=flat-square" alt="made for">
+
+</div>
+
+<p align="center"><img src="docs/filist.png" width="860" alt="filist screenshot"></p>
+
+<p align="center"><!-- gh-note --><sub>tip: the glass button (󰃝, top right) makes the window see-through, like the terminal – needs a compositor with blur, e.g. hyprland.</sub></p>
 
 file explorer for linux (gtk4) in the style of the suite (datist, musicalist, notist, scourge):
 fast, with tabs, split view and preview – and, if you want, the file dialog ("open" / "save as")
@@ -104,3 +119,22 @@ what is missing. the icons are bundled.
 * **"show in folder" suddenly opens filist:** run `./install.sh` again and answer no at "default file manager?",
 or `xdg-mime default org.gnome.Nautilus.desktop inode/directory` (or dolphin/thunar).
 * **file dialog acts up:** `./setup-portal.sh --undo`, log out, log in.
+
+<!-- gh-suite -->
+## the -ist suite
+
+all apps share one look (terminal style, colors from your wallpaper via matugen), one installer and the same shortcuts.
+
+| app | what it does |
+| --- | --- |
+| [scourge](https://github.com/danger-inc/scourge-public) | inspect, edit, record, cut – and installs the others |
+| [notist](https://github.com/danger-inc/notist-public) | notes · words · latex |
+| [datist](https://github.com/danger-inc/datist) | calendar |
+| [mailist](https://github.com/danger-inc/mailist-public) | mail |
+| [musicalist](https://github.com/danger-inc/musicalist-public) | youtube music |
+| [linguist](https://github.com/danger-inc/linguist) | translator + hover corner |
+| [sharist](https://github.com/danger-inc/sharist) | quick share |
+| [wallist](https://github.com/danger-inc/wallist) | wallpapers |
+| [inquirist](https://github.com/danger-inc/inquirist) | launcher |
+
+dotfiles with the matching hyprland setup: [danger-inc/dotfiles](https://github.com/danger-inc/dotfiles)
