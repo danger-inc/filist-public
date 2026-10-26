@@ -1,5 +1,6 @@
 # Seitenleiste „orte“: Standardordner, Lesezeichen (gleiche Datei wie GTK/Nautilus/Thunar), Laufwerke mit
 # Füllstand (einhängen/auswerfen), Papierkorb. Dateien lassen sich auf jeden Eintrag ziehen.
+import flyout
 import os
 
 import gi
@@ -327,15 +328,7 @@ class Places(Gtk.Box):
         menu.append("öffnen", f"freq.open({v})")
         menu.append("im ordner zeigen", f"freq.show({v})")
         menu.append("aus der liste nehmen", f"freq.hide({v})")
-        pop = Gtk.PopoverMenu.new_from_model(menu)
-        pop.add_css_class("fw-menu")
-        pop.set_has_arrow(False)
-        pop.set_parent(b)
-        rect = Gdk.Rectangle()
-        rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
-        pop.set_pointing_to(rect)
-        pop.connect("closed", lambda p: GLib.idle_add(lambda: p.unparent() and False))
-        pop.popup()
+        flyout.Fly(menu, b).popup(b, x, y)
 
     def freq_open(self, uri):
         if getattr(self.win, "mode", "browse") != "browse":   # Dateiauswahl: hinspringen und markieren
@@ -484,15 +477,7 @@ class Places(Gtk.Box):
                 for c in conns:
                     sub.append(("● " if c == cur else "   ") + c, "win.vpn-set::" + uri + "\n" + c)
                 menu.append_submenu("vpn vorher verbinden", sub)
-        pop = Gtk.PopoverMenu.new_from_model(menu)
-        pop.add_css_class("fw-menu")
-        pop.set_has_arrow(False)
-        pop.set_parent(b)
-        rect = Gdk.Rectangle()
-        rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
-        pop.set_pointing_to(rect)
-        pop.connect("closed", lambda p: GLib.idle_add(lambda: p.unparent() and False))
-        pop.popup()
+        flyout.Fly(menu, b).popup(b, x, y)
 
     # ----- Laufwerke -----
     def mount_volume(self, vol):

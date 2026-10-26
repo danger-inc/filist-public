@@ -1,5 +1,9 @@
 # filist – Änderungen
 
+## 1.5.1 (2026-10-26)
+- **Untermenüs klappen beim Überfahren auf**: „öffnen mit“, „teilen“, „osint“, „vpn vorher verbinden“ & Co. öffnen sich direkt neben dem Eintrag, sobald der Zeiger darauf liegt – kein Umschalten des ganzen Menüs mehr.
+- **Teilen auch für Ordner**: „teilen“ im Rechtsklick-Menü erscheint jetzt auch bei Ordnern (sie werden vorher als .zip gepackt) und bei gemischter Auswahl.
+
 ## 1.5.0 (2026-10-26)
 - **Design wählbar**: In den Einstellungen gibt es die Designauswahl wie in notist (Automatisch + 9 Designs). Die Wahl gilt für alle -ist-Apps zugleich und wirkt sofort. Bei „Automatisch“ (Desktop-Farben) kannst du zwischen **Dunkel** und **Hell** umschalten. Zu finden im Zahnrad-Menü unter „design“.
 

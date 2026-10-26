@@ -15,6 +15,7 @@ import model
 import ops as opsmod
 import panels
 import places
+import flyout
 import share
 import vpn
 import tui
@@ -1424,17 +1425,12 @@ class FwWindow(Gtk.ApplicationWindow):
             qs = Gio.Menu()
             qs.append_item(qi)
             m.prepend_section(None, qs)
-        pop = Gtk.PopoverMenu.new_from_model(m)
+        fly = flyout.Fly(m, pane)
         if quick:
-            pop.add_child(self._quick_bar(pop, len(items)), "quick")
-        pop.add_css_class("fw-menu")
-        pop.set_has_arrow(False)
-        pop.set_parent(pane)
-        rect = Gdk.Rectangle()
-        rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
-        pop.set_pointing_to(rect)
-        pop.connect("closed", lambda p: GLib.idle_add(lambda: p.unparent() and False))
-        pop.popup()
+            class _P:                                    # _quick_bar ruft popdown()
+                popdown = staticmethod(fly.close)
+            fly.custom["quick"] = self._quick_bar(_P, len(items))
+        fly.popup(pane, x, y)
 
 
     def _quick_bar(self, pop, n):

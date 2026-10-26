@@ -192,6 +192,12 @@ popover.fw-menu modelbutton { border-radius: 4px; padding: 3px 10px; min-height:
 popover.fw-menu modelbutton:hover { background-color: @primary; color: @on_primary; }
 popover.fw-menu separator { background-color: alpha(@primary, 0.25); margin: 3px 4px; min-height: 1px; }
 popover.fw-menu arrow { color: @primary; }
+popover.fw-menu button.fw-mi { background: none; border: none; box-shadow: none; border-radius: 4px; padding: 3px 10px;
+    min-height: 0; color: @foreground; }
+popover.fw-menu button.fw-mi > box > label { color: @foreground; }
+popover.fw-menu button.fw-mi > box > label.fw-arrow { color: @primary; }
+popover.fw-menu button.fw-mi:hover { background-color: @primary; color: @on_primary; }
+popover.fw-menu button.fw-mi:hover > box > label { color: @on_primary; }
 /* Markierter Text (Eingabefelder, Vorschau, Dialoge): helle Schrift auf kräftiger Akzentfarbe –
    GTKs Standard war dunkle Schrift auf dunklem Blau und kaum lesbar */
 window.fw selection, window.fw-dialog selection, popover selection,

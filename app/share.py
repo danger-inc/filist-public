@@ -16,17 +16,18 @@ def _bin(name):
 
 def ways(paths):
     """Mögliche Wege für diese Dateien → [(id, text)]"""
-    files = [p for p in paths if p and os.path.isfile(p)]
+    files = [p for p in paths if p and os.path.exists(p)]
     out = []
     if not files:
         return out
+    only_files = all(os.path.isfile(p) for p in files)
     if _bin("sharist"):
         out.append(("quick", "quick share (handy) …"))
     if _bin("mailist") or shutil.which("xdg-email"):
         out.append(("mail", "per mail …"))
     if shutil.which("blueman-sendto") or shutil.which("bluetooth-sendto"):
         out.append(("bt", "bluetooth …"))
-    if len(files) == 1 and shutil.which("qrencode") and _small_text(files[0]):
+    if only_files and len(files) == 1 and shutil.which("qrencode") and _small_text(files[0]):
         out.append(("qr", "inhalt als qr-code"))
     return out
 
@@ -47,11 +48,29 @@ def _spawn(argv):
                      start_new_session=True)
 
 
+def _zip_dirs(paths):
+    """Ordner lassen sich nicht anhängen/senden → als .zip in ein Temp-Verzeichnis packen."""
+    import shutil as sh, tempfile
+    out = []
+    tmp = None
+    for p in paths:
+        if os.path.isdir(p):
+            tmp = tmp or tempfile.mkdtemp(prefix="filist-teilen-")
+            p = sh.make_archive(os.path.join(tmp, os.path.basename(p.rstrip("/")) or "ordner"), "zip", p)
+        out.append(p)
+    return out
+
+
 def share(way, paths, win):
-    files = [p for p in paths if p and os.path.isfile(p)]
+    files = [p for p in paths if p and os.path.exists(p)]
     if not files:
-        win.say("teilen geht nur mit dateien", error=True)
+        win.say("nichts zum teilen ausgewählt", error=True)
         return
+    if any(os.path.isdir(p) for p in files):
+        if way == "qr":
+            win.say("ordner lassen sich nicht als qr-code teilen", error=True)
+            return
+        files = _zip_dirs(files)
     n = f"„{os.path.basename(files[0])}“" if len(files) == 1 else f"{len(files)} dateien"
     try:
         if way == "quick":
