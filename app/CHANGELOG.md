@@ -1,5 +1,8 @@
 # filist – Änderungen
 
+## 1.6.0 (2026-10-27)
+- **Wechsel-Animation**: Der Wechsel zwischen Hell und Dunkel (und zwischen Designs) läuft als Scanbalken über den ganzen Bildschirm. Alle Fenster, die Leiste und das Terminal wechseln darunter im selben Moment, hinter dem Balken steht das neue Design. An/aus und Dauer (Standard 1,5 s) stehen in der Designauswahl der Einstellungen.
+
 ## 1.5.1 (2026-10-26)
 - **Untermenüs klappen beim Überfahren auf**: „öffnen mit“, „teilen“, „osint“, „vpn vorher verbinden“ & Co. öffnen sich direkt neben dem Eintrag, sobald der Zeiger darauf liegt – kein Umschalten des ganzen Menüs mehr.
 - **Teilen auch für Ordner**: „teilen“ im Rechtsklick-Menü erscheint jetzt auch bei Ordnern (sie werden vorher als .zip gepackt) und bei gemischter Auswahl.
