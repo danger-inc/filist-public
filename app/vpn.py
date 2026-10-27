@@ -5,7 +5,7 @@
 # „host“ passt auf den Server selbst und alles darunter (Endung); „cmd“ ist optional und läuft statt
 # „nmcli con up“ – bei eduVPN nötig, weil dessen Zertifikat nach ein paar Stunden abläuft und nur der
 # eduVPN-Client ein neues holt (meist ohne Rückfrage, sonst einmal im Browser anmelden).
-import os, re, shutil, subprocess, threading, time, urllib.parse
+import os, re, shutil, subprocess, sys, threading, time, urllib.parse
 
 from gi.repository import GLib
 
@@ -132,7 +132,9 @@ def _run_client(cmd, name, seconds=180):
     steht das VPN, wird er nach kurzer Zeit beendet (die Verbindung hält der NetworkManager). → Fehlertext|None"""
     import tempfile
     log = tempfile.TemporaryFile(mode="w+")
-    p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+    # Anmeldeseite als schwebendes Fenster auf dem aktuellen (filist-)Workspace statt im Browser irgendwo anders
+    env = dict(os.environ, BROWSER=f"{sys.executable} {os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vpn_browser.py')} %s")
+    p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True, env=env)
     end = time.monotonic() + seconds
     try:
         while time.monotonic() < end:
