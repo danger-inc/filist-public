@@ -24,7 +24,7 @@ for **all** programs.
 the repository is public – no account needed:
 
 ```bash
-git clone https://github.com/invincible-nix/filist-public ~/filist-src
+git clone https://github.com/danger-inc/filist-public ~/filist-src
 cd ~/filist-src
 ./install.sh
 ```
