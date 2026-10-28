@@ -1,5 +1,16 @@
 # filist – Änderungen
 
+## 1.7.0 (2026-10-28)
+- **Suche mit Filtern**: Mit Enter im Filterfeld wird in allen Unterordnern gesucht – jetzt zusätzlich nach Typ, Endung,
+  Größe und Alter: `typ:bild` (auch video, audio, dokument, archiv, code, ordner), `ext:pdf,docx`, `größe:>10M`,
+  `größe:1k-5M`, `geändert:<7d` (neuer als 7 Tage), `geändert:>1y` (älter als ein Jahr), `geändert:heute`.
+  Mit einem Namensteil kombinierbar, z. B. `bericht typ:dokument geändert:<30d`. Der Tooltip des Feldes erklärt es.
+- **Verbinden abbrechen**: Beim Warten auf VPN, Netzlaufwerk oder langsame Ordner gibt es auf der Lade-Seite einen
+  „abbrechen“-Knopf. Er beendet auch nmcli/eduvpn-cli im Hintergrund.
+- **Verständlichere Fehler** bei VPN und Netzlaufwerken (Zeitüberschreitung, Anmeldung nötig, Server nicht gefunden …)
+  sagen jetzt, was man tun kann.
+- Behoben: Geschlossene Fenster geben ihren Speicher jetzt sauber frei (Wischfläche, Statuszeile).
+
 ## 1.6.0 (2026-10-27)
 - **Wechsel-Animation**: Der Wechsel zwischen Hell und Dunkel (und zwischen Designs) läuft als Scanbalken über den ganzen Bildschirm. Alle Fenster, die Leiste und das Terminal wechseln darunter im selben Moment, hinter dem Balken steht das neue Design. An/aus und Dauer (Standard 1,5 s) stehen in der Designauswahl der Einstellungen.
 

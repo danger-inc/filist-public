@@ -5,7 +5,7 @@
 # „host“ passt auf den Server selbst und alles darunter (Endung); „cmd“ ist optional und läuft statt
 # „nmcli con up“ – bei eduVPN nötig, weil dessen Zertifikat nach ein paar Stunden abläuft und nur der
 # eduVPN-Client ein neues holt (meist ohne Rückfrage, sonst einmal im Browser anmelden).
-import os, re, shutil, subprocess, sys, threading, time, urllib.parse
+import os, re, shutil, signal, subprocess, sys, threading, time, urllib.parse
 
 from gi.repository import GLib
 
@@ -86,6 +86,70 @@ def set_rule(prefs, uri, name):
 
 
 _busy = {}       # nm-Name → [Rückrufe], damit zwei Fenster nicht doppelt verbinden
+_stop = {}       # nm-Name → Event: Abbrechen-Knopf (beendet nmcli/eduvpn-cli und wartet nicht weiter)
+
+
+class Cancelled(Exception):
+    pass
+
+
+def cancel(name):
+    """Laufenden Verbindungsaufbau abbrechen (der Rückruf von ensure() bekommt dann Fehler „abgebrochen“)."""
+    ev = _stop.get(name)
+    if ev is not None:
+        ev.set()
+
+
+def friendly(err):
+    """Rohe Fehlerzeile von nmcli/eduvpn-cli → Satz, der sagt, was man tun kann."""
+    e = (err or "").strip()
+    low = e.lower()
+    if not e:
+        return "verbindung kam nicht zustande"
+    if "zeitüberschreitung" in low or "timeout" in low or "timed out" in low:
+        return "keine antwort vom vpn – internet da? dann nochmal versuchen (ggf. im eduvpn-fenster anmelden)"
+    if "no secrets" in low or "secrets were required" in low or "passwor" in low:
+        return "vpn braucht eine anmeldung – einmal in der netzwerk-/eduvpn-app verbinden"
+    if "not found" in low or "unknown connection" in low or "no such connection" in low:
+        return "vpn-verbindung existiert nicht mehr – rechtsklick auf den ort → „vpn vorher verbinden“ neu wählen"
+    if "network is unreachable" in low or "no route" in low or "nicht erreichbar" in low:
+        return "kein netz – ist das wlan/kabel verbunden?"
+    if "fehlt oder antwortet nicht" in low:
+        return "networkmanager (nmcli) fehlt oder antwortet nicht"
+    return e
+
+
+def _kill(p):
+    """Prozess samt Kindern beenden (eigene Sitzung → ganze Gruppe)."""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(p.pid, sig)
+        except OSError:
+            return
+        try:
+            p.wait(3)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+
+
+def _run(cmd, stop, timeout):
+    """subprocess.run, das auf den Abbrechen-Knopf hört. → (returncode, ausgabe) | None bei Start-/Zeitfehler"""
+    try:
+        p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                             start_new_session=True)
+    except OSError:
+        return None
+    end = time.monotonic() + timeout
+    while p.poll() is None:
+        if stop.is_set() or time.monotonic() > end:
+            _kill(p)
+            if stop.is_set():
+                raise Cancelled()
+            raise subprocess.TimeoutExpired(cmd, timeout)
+        time.sleep(0.2)
+    out, err = p.communicate()
+    return p.returncode, (err or out or "")
 
 
 def ensure(rule, done, step=None):
@@ -96,6 +160,7 @@ def ensure(rule, done, step=None):
         _busy[name].append(done)
         return
     _busy[name] = [done]
+    stop = _stop[name] = threading.Event()
 
     def say(text):
         if step:
@@ -109,25 +174,30 @@ def ensure(rule, done, step=None):
                 cmd = rule.get("cmd")
                 # erst direkt über den NetworkManager (Sekunden, solange das Zertifikat gilt) …
                 say(f"vpn „{name}“ wird verbunden …")
-                r = _nmcli("connection", "up", "id", name, timeout=45)
-                if r is None or (r.returncode and not is_up(name)):
-                    err = _last_line(r.stderr if r else "") or "nmcli fehlt oder antwortet nicht"
+                r = _run(["nmcli", "-t", "connection", "up", "id", name], stop, 45)
+                if r is None or (r[0] and not is_up(name)):
+                    err = _last_line(r[1] if r else "") or "nmcli fehlt oder antwortet nicht"
                     # … sonst der VPN-Client (eduVPN: holt ein neues Zertifikat, evtl. Anmeldung im Browser)
                     if cmd and shutil.which(cmd[0]):
                         say(f"vpn „{name}“: zertifikat wird erneuert … (evtl. im browser anmelden)")
-                        err = _run_client(cmd, name)
+                        err = _run_client(cmd, name, stop=stop)
                 if not err:
                     time.sleep(0.6)          # Routen/DNS kurz setzen lassen
+        except Cancelled:
+            err = "abgebrochen"
         except subprocess.TimeoutExpired:
-            err = "vpn: zeitüberschreitung"
+            err = "zeitüberschreitung"
         except Exception as e:  # noqa: BLE001 – jeder Fehler soll im Fenster landen
             err = str(e)
+        if err and err != "abgebrochen":
+            err = friendly(err)
+        _stop.pop(name, None)
         cbs = _busy.pop(name, [])
         GLib.idle_add(lambda: ([cb(err, fresh) for cb in cbs], False)[1])
     threading.Thread(target=work, daemon=True).start()
 
 
-def _run_client(cmd, name, seconds=180):
+def _run_client(cmd, name, seconds=180, stop=None):
     """VPN-Client starten und warten, bis die Verbindung steht. eduvpn-cli beendet sich nicht immer von selbst –
     steht das VPN, wird er nach kurzer Zeit beendet (die Verbindung hält der NetworkManager). → Fehlertext|None"""
     import tempfile
@@ -138,6 +208,9 @@ def _run_client(cmd, name, seconds=180):
     end = time.monotonic() + seconds
     try:
         while time.monotonic() < end:
+            if stop is not None and stop.is_set():
+                _kill(p)
+                return "abgebrochen"
             if is_up(name):
                 try:
                     p.wait(8)
@@ -148,8 +221,8 @@ def _run_client(cmd, name, seconds=180):
                 log.seek(0)
                 return _last_line(log.read()) or "vpn kam nicht hoch"
             time.sleep(0.7)
-        p.terminate()
-        return "vpn: zeitüberschreitung"
+        _kill(p)
+        return "zeitüberschreitung"
     finally:
         log.close()
 

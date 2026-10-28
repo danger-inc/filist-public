@@ -94,10 +94,12 @@ class SwipeBin(Gtk.Widget):
             self.helpers[k] = lb
 
     def do_dispose(self):
-        ch, hp = getattr(self, "child", None), getattr(self, "helpers", None) or {}
-        for w in [ch] + list(hp.values()):
-            if w is not None and w.get_parent() is self:
-                w.unparent()
+        # über die echten GTK-Kinder gehen: release_tree() leert die Python-Attribute schon vor dem Dispose
+        w = self.get_first_child()
+        while w is not None:
+            nxt = w.get_next_sibling()
+            w.unparent()
+            w = nxt
         self.child, self.helpers = None, {}
         Gtk.Widget.do_dispose(self)
 

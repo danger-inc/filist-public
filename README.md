@@ -68,7 +68,9 @@ as a user service in the background (window is instantly there); without systemd
 * **sidebar:** folders, bookmarks (same as gtk/thunar), drives with usage, mount/eject,
 network (sftp/smb/ftp), trash
 * **path bar:** click or type with ctrl+L (tab completes), `/` and `~` jump right in
-* **filter** while typing, **enter searches all subfolders**; in the list just start typing to jump to a name
+* **filter** while typing, **enter searches all subfolders**; in the list just start typing to jump to a name.
+the search takes filters: `typ:bild|video|audio|dokument|archiv|code|ordner`, `ext:pdf,docx`, `größe:>10M`, `größe:1k-5M`,
+`geändert:<7d` (newer) / `geändert:>1y` (older) / `geändert:heute` – e.g. `bericht typ:dokument geändert:<30d`
 * **copy/cut/paste** – also with other programs (thunar, nautilus, browser); images and text from the
 clipboard are pasted as a file
 * **drag & drop** (ctrl = copy, shift = move, ctrl+shift = link), also onto folders, tabs, path bar and sidebar
@@ -79,7 +81,7 @@ also "for all")
 regex, numbering and live preview; new folders/files are named right in the row
 * **share** (right click): quick share to your phone (with sharist), mail with attachment, bluetooth, qr code
 * **network drives behind a vpn:** right click on the location → "vpn vorher verbinden" – when you open it, filist
-connects the vpn itself (networkmanager, eduvpn) and shows a spinner meanwhile
+connects the vpn itself (networkmanager, eduvpn) and shows a spinner with a cancel button meanwhile
 * **trash** with restore, delete permanently (shift+del), empty
 * **compress** (zip, tar.gz, tar.xz, 7z) and **extract** (almost all formats)
 * **preview** (space): images, text, pdf/video still, folder contents, info

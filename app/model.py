@@ -1,7 +1,7 @@
 # Datenmodell: ein Eintrag pro Datei (FileItem) und das Einlesen von Ordnern.
 # Lokale Ordner: os.scandir in einem Hintergrund-Thread (sehr schnell, auch bei zehntausenden Dateien).
 # Alles andere (trash:///, recent:///, smb://, sftp:// …) über Gio, ebenfalls asynchron.
-import datetime, locale, os, re, stat, threading, time
+import datetime, locale, os, re, shlex, stat, threading, time
 
 import gi
 gi.require_version("Gtk", "4.0")
@@ -304,3 +304,111 @@ def disk_free(path, on_done=None, wait=0.05):
         ev.quick = True             # schnell genug: Ergebnis direkt, kein Rückruf nötig
         return _df_cache[path]
     return _df_cache.get(path, (None, None))
+
+
+# ---------------------------------------------------------------- Suchfilter
+# Suchfeld: normaler Text = Namensteil (auch mit * ? [ ]); dazu Filter, mit Leerzeichen getrennt:
+#   typ:bild|video|audio|dokument|archiv|code|ordner|datei   ext:pdf,docx   größe:>10M  größe:1k-5M
+#   geändert:<7d (neuer als 7 Tage)  geändert:>1y (älter als ein Jahr)  geändert:heute   (d/w/m/y/h)
+_KINDS = {
+    "bild": ("image/",), "image": ("image/",), "foto": ("image/",),
+    "video": ("video/",), "audio": ("audio/",), "musik": ("audio/",),
+    "text": ("text/",),
+    "archiv": ("application/zip", "application/x-tar", "application/x-7z", "application/x-compressed",
+               "application/gzip", "application/x-xz", "application/x-bzip", "application/x-rar",
+               "application/vnd.rar", "application/zstd", "application/x-zstd"),
+    "dokument": ("application/pdf", "application/msword", "application/vnd.", "application/rtf",
+                 "application/x-tex", "application/epub", "text/plain", "text/markdown", "text/rtf"),
+    "code": ("text/x-", "application/x-shellscript", "application/json", "application/javascript",
+             "application/xml", "text/html", "text/css", "text/javascript", "application/x-python"),
+}
+_KINDS["doc"] = _KINDS["dokument"]
+_KINDS["archive"] = _KINDS["archiv"]
+_SIZE_UNITS = {"": 1, "b": 1, "k": 1024, "m": 1024 ** 2, "g": 1024 ** 3, "t": 1024 ** 4}
+_AGE_UNITS = {"h": 3600, "d": 86400, "w": 7 * 86400, "m": 30 * 86400, "y": 365 * 86400}
+_KEYS = {"typ": "typ", "type": "typ", "ext": "ext", "endung": "ext", "größe": "size", "grösse": "size", "groesse": "size",
+         "size": "size", "geändert": "mod", "geaendert": "mod", "alt": "mod", "mod": "mod", "modified": "mod"}
+
+
+def _size(txt):
+    m = re.fullmatch(r"(\d+(?:[.,]\d+)?)\s*([kmgtb]?)i?b?", txt.strip().lower())
+    if not m:
+        raise ValueError(f"größe „{txt}“ verstehe ich nicht (z. B. 10M, >500k, 1k-5M)")
+    return float(m.group(1).replace(",", ".")) * _SIZE_UNITS[m.group(2)]
+
+
+def _age(txt):
+    m = re.fullmatch(r"(\d+(?:[.,]\d+)?)\s*([hdwmy])", txt.strip().lower())
+    if not m:
+        raise ValueError(f"zeit „{txt}“ verstehe ich nicht (z. B. 7d, <2w, >1y)")
+    return float(m.group(1).replace(",", ".")) * _AGE_UNITS[m.group(2)]
+
+
+def parse_query(query, now=None):
+    """Suchtext → (Namensmuster klein, Filterfunktion|None, Fehler|None).
+    Filterfunktion(name, is_dir, size, mtime, ctype) → bool."""
+    now = now or time.time()
+    words, tests = [], []
+    try:
+        toks = shlex.split(query)
+    except ValueError:
+        toks = query.split()
+    for tok in toks:
+        key, sep, val = tok.partition(":")
+        key = _KEYS.get(key.lower()) if sep and val else None
+        if key is None:
+            words.append(tok)
+            continue
+        val = val.strip()
+        try:
+            if key == "typ":
+                kinds = []
+                for v in val.lower().split(","):
+                    if v in ("ordner", "dir", "folder"):
+                        kinds.append("dir")
+                    elif v in ("datei", "file"):
+                        kinds.append("file")
+                    elif v in _KINDS:
+                        kinds.append(v)
+                    else:
+                        raise ValueError(f"typ „{v}“ unbekannt – bild, video, audio, dokument, archiv, code, text, "
+                                         "ordner, datei")
+
+                def t_typ(n, d, s, m, c, kinds=tuple(kinds)):
+                    for k in kinds:
+                        if k == "dir" and d or k == "file" and not d:
+                            return True
+                        if k in _KINDS and not d and (c or "").startswith(_KINDS[k]):
+                            return True
+                    return False
+                tests.append(t_typ)
+            elif key == "ext":
+                exts = {"." + e.lower().lstrip(".") for e in val.split(",") if e.strip(".")}
+                tests.append(lambda n, d, s, m, c, exts=exts: not d and os.path.splitext(n.lower())[1] in exts)
+            elif key == "size":
+                if val[0] in "<>":
+                    lim = _size(val[1:])
+                    tests.append((lambda n, d, s, m, c, lim=lim: not d and s > lim) if val[0] == ">" else
+                                 (lambda n, d, s, m, c, lim=lim: not d and s < lim))
+                elif "-" in val:
+                    lo, hi = (_size(x) for x in val.split("-", 1))
+                    tests.append(lambda n, d, s, m, c, lo=lo, hi=hi: not d and lo <= s <= hi)
+                else:
+                    lim = _size(val)
+                    tests.append(lambda n, d, s, m, c, lim=lim: not d and lim * 0.9 <= s <= lim * 1.1)
+            elif key == "mod":
+                if val.lower() in ("heute", "today"):
+                    t0 = time.mktime(time.localtime(now)[:3] + (0, 0, 0, 0, 0, -1))
+                    tests.append(lambda n, d, s, m, c, t0=t0: m >= t0)
+                elif val[0] == ">":          # älter als
+                    age = _age(val[1:])
+                    tests.append(lambda n, d, s, m, c, age=age: now - m > age)
+                else:                        # „<7d“ oder „7d“ = neuer als
+                    age = _age(val[1:] if val[0] == "<" else val)
+                    tests.append(lambda n, d, s, m, c, age=age: now - m <= age)
+        except ValueError as e:
+            return "", None, str(e)
+    name = " ".join(words).casefold()
+    if not tests:
+        return name, None, None
+    return name, (lambda n, d, s, m, c: all(t(n, d, s, m, c) for t in tests)), None

@@ -248,6 +248,9 @@ class FwWindow(Gtk.ApplicationWindow):
         nav.append(self.path)
         self.filter = tui.Entry("filtern · enter = überall suchen", width=24)
         self.filter.set_hexpand(False)
+        self.filter.set_tooltip_text("enter = in allen Unterordnern suchen. Filter dazu:\n"
+                                     "typ:bild|video|audio|dokument|archiv|code|ordner   ext:pdf,docx\n"
+                                     "größe:>10M   größe:1k-5M   geändert:<7d (neuer)   geändert:>1y (älter)   geändert:heute")
         self.filter.connect("changed", self._filter_changed)
         self.filter.connect("activate", lambda *_: self._search())
         fk = Gtk.EventControllerKey()
@@ -563,24 +566,35 @@ class FwWindow(Gtk.ApplicationWindow):
         state = {"done": False}
         self.places.busy(uri, True)
 
+        def cancel():
+            state["done"] = True
+            vpn.cancel(name)
+            self.places.busy(uri, False)
+            self.say("abgebrochen")
+
         def later():
             if not state["done"] and not state.get("step"):
-                pane.show_busy(f"\U000F099D  vpn „{name}“ wird geprüft …")
+                pane.show_busy(f"\U000F099D  vpn „{name}“ wird geprüft …", cancel)
             return False
         GLib.timeout_add(150, later)
 
         def step(text):
             if not state["done"]:
                 state["step"] = True
-                pane.show_busy("\U000F099D  " + text)
+                pane.show_busy("\U000F099D  " + text, cancel)
                 self.say(text)
 
         def done(err, fresh=False):
+            if state["done"]:                # vom Abbrechen-Knopf schon erledigt
+                return
             state["done"] = True
             if err:
                 self.places.busy(uri, False)
                 pane.hide_busy()
-                self.say(f"vpn „{name}“: {err}", error=True, seconds=12)
+                if err == "abgebrochen":
+                    self.say("abgebrochen")
+                else:
+                    self.say(f"vpn „{name}“: {err}", error=True, seconds=12)
                 return
             if fresh and uri.startswith(self.REMOTE) and self._mounted(uri):
                 self._remount(uri, pane)     # VPN war weg → alte Verbindung zum Server ist tot
@@ -614,7 +628,12 @@ class FwWindow(Gtk.ApplicationWindow):
         op = Gtk.MountOperation.new(self)
         host = vpn.host_of(uri) or uri
         self.say(f"verbinde mit {host} …")
-        pane.show_busy(f"\U000F0318  verbinde mit {host} …")
+        cancellable = Gio.Cancellable()
+
+        def cancel():
+            cancellable.cancel()
+            self.say("abgebrochen")
+        pane.show_busy(f"\U000F0318  verbinde mit {host} …", cancel)
         self.places.busy(uri, True)
 
         def done(file, res):
@@ -622,16 +641,29 @@ class FwWindow(Gtk.ApplicationWindow):
             try:
                 file.mount_enclosing_volume_finish(res)
             except GLib.Error as e:
+                if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED):
+                    return
                 if not e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.ALREADY_MOUNTED):
                     pane.hide_busy()
-                    self.say(f"verbinden fehlgeschlagen: {e.message}", error=True, seconds=12)
+                    self.say(f"verbinden fehlgeschlagen: {self._mount_hint(e.message)}", error=True, seconds=12)
                     return
             self.say(f"verbunden: {host}")
             pane._reconnected = None
             pane.go(uri)
             pane.focus_view()
             self._watch_load(pane, uri)
-        f.mount_enclosing_volume(Gio.MountMountFlags.NONE, op, None, done)
+        f.mount_enclosing_volume(Gio.MountMountFlags.NONE, op, cancellable, done)
+
+    @staticmethod
+    def _mount_hint(msg):
+        low = (msg or "").lower()
+        if "timed out" in low or "timeout" in low or "zeitüberschreitung" in low:
+            return "server antwortet nicht – vpn oder netz prüfen"
+        if "no such host" in low or "could not resolve" in low or "name or service not known" in low:
+            return "servername nicht gefunden – vpn oder netz prüfen"
+        if "password" in low or "logon" in low or "denied" in low or "authentic" in low:
+            return "anmeldung abgelehnt – benutzer/passwort stimmen?"
+        return msg
 
     def _watch_load(self, pane, uri, seconds=15):
         """Netzlaufwerk lädt ewig (tote Verbindung)? Nach ein paar Sekunden einmal neu verbinden."""
@@ -661,16 +693,19 @@ class FwWindow(Gtk.ApplicationWindow):
                 self._via_vpn(uri, rule, pane)
             else:
                 self.mount_and_open(uri, pane)
-        pane.show_busy("\U000F0318  verbindung wird erneuert …")
-        self._unmount_then(mount, again)
+        alive = {"v": True}
+        pane.show_busy("\U000F0318  verbindung wird erneuert …", lambda: alive.update(v=False))
+        self._unmount_then(mount, lambda: alive["v"] and again())
 
     def _remount(self, uri, pane):
         try:
             mount = Gio.File.new_for_uri(uri).find_enclosing_mount(None)
         except GLib.Error:
             mount = None
-        pane.show_busy("\U000F0318  verbindung zum server wird erneuert …")
-        self._unmount_then(mount, lambda: self.mount_and_open(uri, pane))
+        alive = {"v": True}
+        pane.show_busy("\U000F0318  verbindung zum server wird erneuert …",
+                       lambda: (alive.update(v=False), self.places.busy(uri, False)))
+        self._unmount_then(mount, lambda: alive["v"] and self.mount_and_open(uri, pane))
 
     def _unmount_then(self, mount, then):
         if mount is not None and mount.can_unmount():
@@ -883,6 +918,9 @@ class FwWindow(Gtk.ApplicationWindow):
         q = self.filter.get_text().strip()
         if q:
             self.pane.start_search(q)
+            if self.pane.search_error:
+                self.say(self.pane.search_error, error=True)
+                return
             self.say(f"suche „{q}“ in {icons.home_relative(self.pane.search['root'])} …" if self.pane.search else
                      "suche geht nur in lokalen ordnern")
 
@@ -1651,12 +1689,17 @@ class FwWindow(Gtk.ApplicationWindow):
         self._status_id = GLib.timeout_add_seconds(seconds, self._clear_status)
 
     def _clear_status(self):
-        self.status.set_label("")
         self._status_id = None
+        st = getattr(self, "status", None)      # Fenster schon aufgeräumt (release_tree) → nichts mehr zu tun
+        if st is not None:
+            st.set_label("")
         return False
 
     def _on_close(self, *_):
         self.app.save_prefs()
+        if self._status_id:
+            GLib.source_remove(self._status_id)
+            self._status_id = None
         for t in self.tabs:
             for p in t.panes:
                 if p.monitor:

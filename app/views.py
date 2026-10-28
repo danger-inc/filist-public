@@ -77,8 +77,14 @@ class Pane(Gtk.Box):
         busy.add_css_class("fw-busy")
         busy.append(self.busy_spin)
         busy.append(self.busy_lbl)
+        self.busy_cancel_btn = Gtk.Button(label="abbrechen", halign=Gtk.Align.CENTER, focus_on_click=False,
+                                          visible=False)
+        self.busy_cancel_btn.connect("clicked", lambda *_: self.cancel_busy())
+        busy.append(self.busy_cancel_btn)
+        self._busy_cancel = None
         self.stack.add_named(busy, "busy")
         self._busy_id = None
+        self.search_error = None
         self.edit_after = None         # (uri, start(item)) nach dem nächsten Laden
         self.editing = None            # Inline-Umbenennen läuft: {"item", "text", "cell", "done"}
         # 2-Finger-Zurück/Vor im -ist-Design (swipe.py, Seitenstapel mit Vorschau der Zielseite)
@@ -522,10 +528,19 @@ class Pane(Gtk.Box):
                     name = location_name(self.uri)
                     if name in ("/", ""):
                         name = urllib.parse.urlsplit(self.uri).hostname or name
-                    self.show_busy(f"\U000F0318  {name} wird geladen …")
+                    self.show_busy(f"\U000F0318  {name} wird geladen …", self._abort_load)
                 return False
             self._busy_id = GLib.timeout_add(250, slow)
         self.loader.load(self.uri, lambda items, err: self._loaded(items, err, keep_sel))
+
+    def _abort_load(self):
+        """Langsames Laden (Netz) abbrechen: Ergebnis verwerfen, Fehlerseite statt endlosem Spinner."""
+        self.loader.gen += 1
+        self.loading = False
+        self.error = GLib.Error("abgebrochen")
+        self.all = []
+        self._apply()
+        self._show_empty("\U000F0349\nabgebrochen\nF5 versucht es nochmal")
 
     def _loaded(self, items, err, keep_sel):
         self.loading = False
@@ -640,12 +655,23 @@ class Pane(Gtk.Box):
                 self.edit_after = None
                 GLib.idle_add(lambda: (start(it), False)[1])
 
-    def show_busy(self, text):
+    def show_busy(self, text, cancel=None):
+        """Spinner-Seite. cancel: Rückruf für den „abbrechen“-Knopf (None = Knopf bleibt weg)."""
         self.busy_lbl.set_label(text)
+        self._busy_cancel = cancel
+        self.busy_cancel_btn.set_visible(cancel is not None)
         self.busy_spin.start()
         self.stack.set_visible_child_name("busy")
 
+    def cancel_busy(self):
+        cb, self._busy_cancel = self._busy_cancel, None
+        self.hide_busy()
+        if cb:
+            cb()
+
     def hide_busy(self):
+        self._busy_cancel = None
+        self.busy_cancel_btn.set_visible(False)
         if self._busy_id:
             GLib.source_remove(self._busy_id)
             self._busy_id = None
@@ -913,12 +939,16 @@ class Pane(Gtk.Box):
         base = model.path_of(self.uri)
         if not base or not query.strip():
             return
+        q, test, err = model.parse_query(query)
+        if err:
+            self.search_error = err
+            return
+        self.search_error = None
         gen = (self.search or {}).get("gen", 0) + 1
         self.search = {"query": query, "root": base, "gen": gen, "running": True, "count": 0}
         self.all, self.filter = [], ""
         self.columns["where"].set_visible(True)
         self._apply()
-        q = query.casefold()
         glob = any(c in q for c in "*?[")
         hidden = self.show_hidden
         batch, lock = [], threading.Lock()
@@ -945,7 +975,7 @@ class Pane(Gtk.Box):
                 dirs[:] = [d for d in dirs if d not in ("node_modules", "__pycache__", ".cache")]
                 for name in dirs + files:
                     n = name.casefold()
-                    if (fnmatch.fnmatch(n, q) if glob else q in n) and (hidden or not icons.is_hidden(name)):
+                    if (not q or (fnmatch.fnmatch(n, q) if glob else q in n)) and (hidden or not icons.is_hidden(name)):
                         full = os.path.join(root, name)
                         try:
                             st = os.stat(full)
@@ -953,6 +983,8 @@ class Pane(Gtk.Box):
                             continue
                         is_dir = os.path.isdir(full)
                         ctype = "inode/directory" if is_dir else Gio.content_type_guess(name, None)[0]
+                        if test is not None and not test(name, is_dir, st.st_size, st.st_mtime, ctype):
+                            continue
                         with lock:
                             batch.append((name, GLib.filename_to_uri(full, None), full, is_dir, os.path.islink(full),
                                           st.st_size, st.st_mtime, st.st_mode, ctype,
