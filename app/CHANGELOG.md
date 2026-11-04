@@ -1,5 +1,8 @@
 # filist – Änderungen
 
+## 1.9.0 (2026-11-02)
+- **Aufräumen**: Rechtsklick auf einen Ordner oder in leeren Platz → „aufräumen“. Ein Fenster mit vier Reitern: **aufräumen** (temporäre und Sicherungsdateien, leere Dateien/Ordner, kaputte Verknüpfungen, doppelte Dateien), **speicher freigeben** (Papierkorb, alte Downloads, ~/.cache mit Größen; Pakete-Cache als Befehl zum Kopieren), **große dateien** (größte Unterordner und Dateien, mit Balken) und **sortieren** (lose Dateien nach Typ, Monat oder Typ+Jahr, mit Vorschau und „rückgängig“). Es wird nichts ohne Vorschau und Bestätigung entfernt; Dateien gehen in den Papierkorb, nur Caches werden wirklich gelöscht.
+
 ## 1.8.0 (2026-11-01)
 - **Scroll-Ende**: Wer am Ende einer Seite weiterscrollt, sieht aus der Kante einen Verlauf aus ░ ▒ ▓ █ aufsteigen, am Mauszeiger am höchsten. Die Liste bewegt sich dabei nicht und der Effekt läuft ohne Überschwingen aus. Er erscheint nur, wenn kein umgebendes Scroll-Fenster mehr weiterscrollen kann. Abschalten: `"scroll_end": false` in ~/.config/rice-apps/settings.json oder Energiesparmodus.
 

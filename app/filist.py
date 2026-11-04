@@ -242,7 +242,7 @@ class Filist(Gtk.Application):
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
-        tui.CSS = tui.CSS + FW_CSS + __import__("swipe").CSS  # eigener Stil muss in denselben Provider (wegen @primary …)
+        tui.CSS = tui.CSS + FW_CSS + __import__("swipe").CSS + __import__("cleanupui").CSS  # eigener Stil muss in denselben Provider (wegen @primary …)
         tui.Theme.get()
         import dialogs
         self.ops.on_conflict = lambda job, kind, src, dst, reply: dialogs.conflict(self._active(), kind, src, dst,

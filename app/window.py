@@ -8,6 +8,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, Gio, GLib, GObject, Gtk, Pango
 
+import cleanupui
 import dialogs
 import glass
 import icons
@@ -1432,6 +1433,7 @@ class FwWindow(Gtk.ApplicationWindow):
                 if len(items) == 1 and items[0].is_dir:
                     sec.append("als lesezeichen", "win.bookmark")
                 m.append_section(None, sec)
+                self._cleanup_menu(m, items)
                 sec = Gio.Menu()
                 sec.append("in den papierkorb", "win.trash")
                 sec.append("endgültig löschen …", "win.delete")
@@ -1450,6 +1452,7 @@ class FwWindow(Gtk.ApplicationWindow):
                 sec.append("terminal hier", "win.terminal")
             m.append_section(None, sec)
             sec = Gio.Menu()
+            self._cleanup_menu(m, [])
             sec.append("alles auswählen", "win.select-all")
             sec.append("versteckte " + ("ausblenden" if pane.show_hidden else "anzeigen"), "win.hidden")
             sec.append("als lesezeichen", "win.bookmark")
@@ -1469,6 +1472,26 @@ class FwWindow(Gtk.ApplicationWindow):
                 popdown = staticmethod(fly.close)
             fly.custom["quick"] = self._quick_bar(_P, len(items))
         fly.popup(pane, x, y)
+
+    def _cleanup_menu(self, m, items):
+        """Untermenü „aufräumen“: Ordner aufräumen, Speicher freigeben, große Dateien, Sortieren."""
+        if not self.pane.local_path():
+            return
+        if items and not (len(items) == 1 and items[0].is_dir):
+            return
+        sub = Gio.Menu()
+        sub.append("ordner aufräumen (temporäres, leeres, doppeltes) …", "win.cleanup::tidy")
+        sub.append("große dateien finden …", "win.cleanup::big")
+        sub.append("lose dateien sortieren …", "win.cleanup::sort")
+        sub.append("speicher freigeben (cache, papierkorb) …", "win.cleanup::space")
+        sec = Gio.Menu()
+        sec.append_submenu("aufräumen", sub)
+        m.append_section(None, sec)
+
+    def cleanup(self, tab):
+        items = self.targets()
+        folder = items[0].path if len(items) == 1 and items[0].is_dir and items[0].path else self.pane.local_path()
+        cleanupui.CleanupWindow(self, folder, tab)
 
 
     def _quick_bar(self, pop, n):
@@ -1559,6 +1582,7 @@ class FwWindow(Gtk.ApplicationWindow):
                          ("eject", lambda u: self.places.eject_uri(u)),
                          ("share", lambda w: share.share(w, [i.path for i in self.targets()], self)),
                          ("vpn-set", lambda a: self.set_vpn(a)),
+                         ("cleanup", lambda w: self.cleanup(w)),
                          ):
             act = Gio.SimpleAction.new(name, GLib.VariantType.new("s"))
             act.connect("activate", lambda a, p, cb=cb: cb(p.get_string()))
