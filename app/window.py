@@ -348,6 +348,19 @@ class FwWindow(Gtk.ApplicationWindow):
             sel = tui.Select(self._choose_filter, max_chars=30)
             sel.set_options([(str(i), f[0]) for i, f in enumerate(self.filters)], str(self.filter_idx))
             bar.append(sel)
+        vals = c.setdefault("choice_vals", {})
+        for cid, clabel, copts, cinit in c.get("choices") or []:
+            vals[cid] = cinit
+            if copts:
+                csel = tui.Select(lambda v, cid=cid: self._set_choice(cid, v), max_chars=26)
+                csel.set_options([(str(o), t) for o, t in copts], str(cinit) or str(copts[0][0]))
+                self._choice_widgets = getattr(self, "_choice_widgets", {})
+                self._choice_widgets[cid] = (csel, copts)
+                bar.append(tui.label(clabel.replace("_", "").lower(), "dim"))
+                bar.append(csel)
+            else:
+                bar.append(tui.Check(clabel.replace("_", "").lower(), cinit == "true",
+                                     lambda on, cid=cid: vals.__setitem__(cid, "true" if on else "false")))
         cancel = tui.Button("abbrechen", lambda: self.finish(False))
         ok_text = c.get("accept_label") or {"open": "öffnen", "save": "speichern", "dir": "ordner wählen"}[self.mode]
         ok_text = ok_text.replace("_", "").lower()
@@ -1748,6 +1761,11 @@ class FwWindow(Gtk.ApplicationWindow):
                 thumbs.THUMBS.drop()
 
     # ================================================================ Auswahl-Modus (Portal)
+    def _set_choice(self, cid, val):
+        self.chooser["choice_vals"][cid] = val
+        sel, copts = self._choice_widgets[cid]
+        sel.set_options([(str(o), t) for o, t in copts], val)
+
     def _choose_filter(self, idx):
         self.filter_idx = int(idx)
         self.apply_chooser_filter()

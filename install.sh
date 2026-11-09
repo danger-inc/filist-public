@@ -98,6 +98,14 @@ if (( OLD_PORTAL )) || ask "filist auch als Datei-Dialog („Öffnen“/„Speic
     "$SRC/setup-portal.sh" || warn "Datei-Dialog konnte nicht eingerichtet werden – filist selbst läuft trotzdem."
 fi
 
+# Gnumeric (GTK3) kennt das Portal nicht → kleiner LD_PRELOAD-Shim leitet seinen Dateidialog an filist um
+if command -v gnumeric >/dev/null 2>&1 && [ -x "$SRC/gnumeric-shim/install.sh" ] && command -v gcc >/dev/null 2>&1 \
+   && pkg-config --exists gtk+-3.0 2>/dev/null; then
+    if ask "Gnumeric ebenfalls mit filist als Dateidialog starten? (baut einen kleinen Shim; rückgängig: gnumeric-shim/install.sh --undo)" n; then
+        "$SRC/gnumeric-shim/install.sh" || warn "Gnumeric-Shim konnte nicht eingerichtet werden."
+    fi
+fi
+
 # laufenden Dienst neu starten, damit die neue Version greift
 if [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
     if have_systemd; then

@@ -129,6 +129,7 @@ class Services:
         for name, rules in opts.get("filters", []) or []:
             filters.append((name, list(rules)))
         chooser["filters"] = filters
+        chooser["choices"] = [(c[0], c[1], [tuple(o) for o in c[2]], c[3]) for c in opts.get("choices") or []]
         cur = opts.get("current_filter")
         if cur and filters:
             for i, f in enumerate(filters):
@@ -162,7 +163,7 @@ class Services:
                 name, rules = filters[filter_idx]
                 res["current_filter"] = GLib.Variant("(sa(us))", (name, rules))
             if opts.get("choices"):
-                res["choices"] = GLib.Variant("a(ss)", [(c[0], c[3]) for c in opts["choices"]])
+                res["choices"] = GLib.Variant("a(ss)", [(cid, chooser.get("choice_vals", {}).get(cid, init)) for cid, _l, _o, init in chooser["choices"]])
             inv.return_value(GLib.Variant("(ua{sv})", (0, res)))
         chooser["done"] = done
         start = Gio.File.new_for_path(folder).get_uri() if folder and os.path.isdir(folder) else None

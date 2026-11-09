@@ -3,6 +3,7 @@
 set -euo pipefail
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -x "$SRC/setup-portal.sh" ] && "$SRC/setup-portal.sh" --undo || true
+[ -x "$SRC/gnumeric-shim/install.sh" ] && "$SRC/gnumeric-shim/install.sh" --undo || true
 systemctl --user stop filist.service 2>/dev/null || true
 rm -f "$HOME/.config/systemd/user/filist.service"
 systemctl --user daemon-reload 2>/dev/null || true
